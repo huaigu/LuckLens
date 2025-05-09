@@ -230,6 +230,9 @@ export default function CyberLuck() {
         <div className="text-[10px] text-green-400 mt-1">
           在区块链的世界里，最大的风险不是亏损，而是错过。
         </div>
+        <div className="text-[10px] text-green-300 mt-2 text-right italic">
+          Made with ❤️ by Monad Fans
+        </div>
       </div>
     );
   }
@@ -248,7 +251,7 @@ export default function CyberLuck() {
       {/* 内容层 */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
         <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
-        <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">CYBER 抽签</h2>
+        <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">赛博抽签</h2>
         {renderSticks()}
         <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
           {isDrawing ? "抽签中..." : luck.text}
