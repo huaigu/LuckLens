@@ -2,30 +2,36 @@ import { Metadata } from "next";
 import App from "@/components/pages/app";
 import { APP_URL } from "@/lib/constants";
 
-const frame = {
+// 原应用的框架
+
+// CyberLuck抽签组件的框架
+const cyberLuckFrame = {
   version: "next",
-  imageUrl: `${APP_URL}/images/feed.png`,
+  imageUrl: `${APP_URL}/images/share.jpg`,
   button: {
-    title: "Launch Template",
+    title: "Draw",
     action: {
       type: "launch_frame",
-      name: "Monad Farcaster MiniApp Template",
-      url: APP_URL,
-      splashImageUrl: `${APP_URL}/images/splash.png`,
-      splashBackgroundColor: "#f7f7f7",
+      name: "Crypto Fortune",
+      url: `${APP_URL}`,
+      splashImageUrl: `${APP_URL}/images/share.jpg`,
+      splashBackgroundColor: "#181c24",
     },
   },
 };
 
 export async function generateMetadata(): Promise<Metadata> {
+
   return {
-    title: "Monad Farcaster MiniApp Template",
+    metadataBase: new URL(APP_URL),
+    title: "Crypto Fortune",
     openGraph: {
-      title: "Monad Farcaster MiniApp Template",
-      description: "A template for building mini-apps on Farcaster and Monad",
+      title: "Crypto Fortune 赛博抽签",
+      description: "抽取今日交易运势，获取专属赛博箴言",
+      images: [`${APP_URL}/images/share.jpg`], // 用数组包裹
     },
     other: {
-      "fc:frame": JSON.stringify(frame),
+      "fc:frame": JSON.stringify(cyberLuckFrame),
     },
   };
 }

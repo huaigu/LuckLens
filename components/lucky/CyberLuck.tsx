@@ -119,7 +119,8 @@ export default function CyberLuck() {
     
     actions?.composeCast &&
       actions.composeCast({
-        text: `我的${getTodayStr()}运势：${luck.text} (${luck.score}分)\n宜：${yiText}\n忌：${jiText}\n箴言：${cyberProverbs[proverbIdx]}\n#CyberLuck`,
+        text: `我的${getTodayStr()}运势：${luck.text} (${luck.score}分)\n宜：${yiText}\n忌：${jiText}\n箴言：${cyberProverbs[proverbIdx]}\n#CryptoFortune`,
+        embeds: [window.location.origin]
       });
   }
 
@@ -218,9 +219,23 @@ export default function CyberLuck() {
       </div>
     );
   }
+  
+  // 渲染终端 fortune 输出
+  function renderTerminalFortune() {
+    return (
+      <div className="w-full p-2 border-2 border-green-800 bg-[#0d1a0d] shadow-[2px_2px_0_#333] rounded-none font-mono absolute bottom-0 left-0">
+        <div className="text-[10px] text-green-500 font-bold">
+          root@LuckLens:~# fortune
+        </div>
+        <div className="text-[10px] text-green-400 mt-1">
+          在区块链的世界里，最大的风险不是亏损，而是错过。
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-screen max-w-xs mx-auto p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
+    <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
       {/* 背景像素图 */}
       {/* <Image
         src="/images/feed.png"
@@ -231,7 +246,7 @@ export default function CyberLuck() {
         sizes="100vw"
       /> */}
       {/* 内容层 */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
         <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
         <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">CYBER 抽签</h2>
         {renderSticks()}
@@ -269,6 +284,8 @@ export default function CyberLuck() {
         >
           分享运势
         </button>
+        
+        {!isDrawing && renderTerminalFortune()}
       </div>
       
       {/* 添加动画关键帧 */}
