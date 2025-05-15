@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useMiniAppContext } from "@/hooks/use-miniapp-context";
+import { useAccount } from "wagmi";
 
 // 赛博箴言列表
 const cyberProverbs = [
@@ -72,42 +73,69 @@ export default function CyberLuck() {
   const luck = luckList[luckIdx];
   const [proverbIdx, setProverbIdx] = useState(Math.floor(Math.random() * cyberProverbs.length));
   const { actions } = useMiniAppContext();
+  const { address } = useAccount();
   
   // 抽签动画状态
   const [isDrawing, setIsDrawing] = useState(false);
   const [animatingStick, setAnimatingStick] = useState(-1);
 
+  // 新增：抽签次数和提示
+  const [drawCount, setDrawCount] = useState(0);
+  const [drawTip, setDrawTip] = useState("");
+
+  // 获取今日抽签次数
+  useEffect(() => {
+    if (!address) {
+      setDrawCount(0);
+      setDrawTip("请先连接钱包");
+      return;
+    }
+    const today = getTodayStr();
+    const key = `cyberluck_draw_count_${address}_${today}`;
+    const count = parseInt(localStorage.getItem(key) || "0", 10);
+    setDrawCount(count);
+    if (count >= 3) {
+      setDrawTip("今日抽签次数已用完");
+    } else {
+      setDrawTip("");
+    }
+  }, [address, isDrawing]);
+
   function drawLuck() {
-    // 如果已经在抽签，直接返回
+    if (!address) {
+      setDrawTip("请先连接钱包");
+      return;
+    }
+    if (drawCount >= 3) {
+      setDrawTip("今日抽签次数已用完");
+      return;
+    }
     if (isDrawing) return;
-    
-    // 开始抽签动画
     setIsDrawing(true);
-    
-    // 随机闪烁动画
     let duration = 0;
-    const totalDuration = 2500; // 2.5 秒动画
-    const interval = 300; // 每300ms变化一次高亮签
+    const totalDuration = 2500;
+    const interval = 300;
     let stickTimer: NodeJS.Timeout | null = null;
-    
     stickTimer = setInterval(() => {
       duration += interval;
-      // 随机选一个签亮起
       setAnimatingStick(Math.floor(Math.random() * 3));
-      
-      // 动画结束
       if (duration >= totalDuration) {
         if (stickTimer) clearInterval(stickTimer);
-        
-        // 确定最终结果
         const finalIdx = Math.floor(Math.random() * luckList.length);
         setLuckIdx(finalIdx);
         setProverbIdx(Math.floor(Math.random() * cyberProverbs.length));
-        
-        // 延迟一点显示最终结果
         setTimeout(() => {
-          setAnimatingStick(finalIdx % 3); // 最终点亮哪一根签
+          setAnimatingStick(finalIdx % 3);
           setIsDrawing(false);
+          // 更新抽签次数
+          const today = getTodayStr();
+          const key = `cyberluck_draw_count_${address}_${today}`;
+          const newCount = drawCount + 1;
+          localStorage.setItem(key, String(newCount));
+          setDrawCount(newCount);
+          if (newCount >= 3) {
+            setDrawTip("今日抽签次数已用完");
+          }
         }, 300);
       }
     }, interval);
@@ -267,15 +295,18 @@ export default function CyberLuck() {
         
         <button
           className={`w-full mb-3 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
-            isDrawing 
-              ? "bg-gray-500 text-gray-300 cursor-not-allowed" 
+            isDrawing || !address || drawCount >= 3
+              ? "bg-gray-500 text-gray-300 cursor-not-allowed"
               : "bg-[#ffe066] text-black hover:bg-yellow-300 transition"
           }`}
           onClick={drawLuck}
-          disabled={isDrawing}
+          disabled={isDrawing || !address || drawCount >= 3}
         >
-          {isDrawing ? "抽签中..." : "抽签"}
+          {isDrawing ? "抽签中..." : (!address ? "请先连接钱包" : (drawCount >= 3 ? "今日已达上限" : "抽签"))}
         </button>
+        {drawTip && (
+          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip}</div>
+        )}
         <button
           className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
             isDrawing 
