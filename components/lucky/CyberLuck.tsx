@@ -1,8 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useMiniAppContext } from "@/hooks/use-miniapp-context";
-import { useAccount } from "wagmi";
+import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther } from "viem";
+import { monadTestnet } from "viem/chains";
+
+const MAX_DRAW_COUNT = 3;
 
 // 赛博箴言列表
 const cyberProverbs = [
@@ -68,12 +72,30 @@ function getTodayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function getLuckStorageKey(address: string, date: string) {
+  return `cyberluck_result_${address}_${date}`;
+}
+
+const CONTRACT_ADDRESS = "0xACf06C4C2A80883535DDE647DeC499EAd80bD881";
+const CONTRACT_ABI = [
+  {
+    "inputs": [],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+];
+
 export default function CyberLuck() {
-  const [luckIdx, setLuckIdx] = useState(0);
-  const luck = luckList[luckIdx];
-  const [proverbIdx, setProverbIdx] = useState(Math.floor(Math.random() * cyberProverbs.length));
+  const [luckIdx, setLuckIdx] = useState<number | null>(null);
+  const [proverbIdx, setProverbIdx] = useState<number | null>(null);
   const { actions } = useMiniAppContext();
-  const { address } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const { sendTransaction, data: txHash, isPending: isMinting, isError, error, isSuccess } = useSendTransaction();
+  const { sendTransactionAsync } = useSendTransaction();
+  const [txSent, setTxSent] = useState(false);
   
   // 抽签动画状态
   const [isDrawing, setIsDrawing] = useState(false);
@@ -83,71 +105,124 @@ export default function CyberLuck() {
   const [drawCount, setDrawCount] = useState(0);
   const [drawTip, setDrawTip] = useState("");
 
-  // 获取今日抽签次数
+  // 新增：mint 状态
+  const [mintTip, setMintTip] = useState("");
+
+  const [animationDone, setAnimationDone] = useState(false);
+  const stickTimer = useRef<NodeJS.Timeout | null>(null);
+  const finalIdx = useRef(0);
+
+  // 页面加载时读取本地抽签结果
   useEffect(() => {
     if (!address) {
-      setDrawCount(0);
-      setDrawTip("请先连接钱包");
+      setLuckIdx(null);
+      setProverbIdx(null);
       return;
     }
     const today = getTodayStr();
-    const key = `cyberluck_draw_count_${address}_${today}`;
-    const count = parseInt(localStorage.getItem(key) || "0", 10);
-    setDrawCount(count);
-    if (count >= 3) {
-      setDrawTip("今日抽签次数已用完");
+    const resultKey = getLuckStorageKey(address, today);
+    const resultStr = localStorage.getItem(resultKey);
+    if (resultStr) {
+      try {
+        const { luckIdx: l, proverbIdx: p, date } = JSON.parse(resultStr);
+        if (date === today && typeof l === 'number' && typeof p === 'number') {
+          setLuckIdx(l);
+          setProverbIdx(p);
+        } else {
+          setLuckIdx(null);
+          setProverbIdx(null);
+        }
+      } catch {
+        setLuckIdx(null);
+        setProverbIdx(null);
+      }
     } else {
-      setDrawTip("");
+      setLuckIdx(null);
+      setProverbIdx(null);
     }
-  }, [address, isDrawing]);
+  }, [address]);
 
-  function drawLuck() {
-    if (!address) {
+  // 动画和链上确认同步开奖
+  useEffect(() => {
+    if (!isDrawing || !txSent) return;
+    if (animationDone) {
+      if (stickTimer.current) clearInterval(stickTimer.current);
+      const lidx = finalIdx.current;
+      const pidx = Math.floor(Math.random() * cyberProverbs.length);
+      setLuckIdx(lidx);
+      setProverbIdx(pidx);
+      if (address) {
+        const today = getTodayStr();
+        const resultKey = getLuckStorageKey(address, today);
+        localStorage.setItem(resultKey, JSON.stringify({ luckIdx: lidx, proverbIdx: pidx, date: today }));
+        const key = `cyberluck_draw_count_${address}_${today}`;
+        const newCount = drawCount + 1;
+        localStorage.setItem(key, String(newCount));
+        setDrawCount(newCount);
+        if (newCount >= MAX_DRAW_COUNT) {
+          setDrawTip("今日抽签次数已用完");
+        }
+      }
+      setTimeout(() => {
+        setAnimatingStick(lidx % 3);
+        setIsDrawing(false);
+        setTxSent(false);
+      }, 300);
+    }
+  }, [animationDone, txSent, isDrawing]);
+
+  async function drawLuck() {
+    if (!isConnected) {
       setDrawTip("请先连接钱包");
       return;
     }
-    if (drawCount >= 3) {
+    if (chainId !== monadTestnet.id) {
+      setDrawTip("请切换到 Monad Testnet 网络");
+      return;
+    }
+    if (drawCount >= MAX_DRAW_COUNT) {
       setDrawTip("今日抽签次数已用完");
       return;
     }
     if (isDrawing) return;
     setIsDrawing(true);
+    setMintTip("");
+    setTxSent(false);
+    setAnimationDone(false);
+    finalIdx.current = Math.floor(Math.random() * luckList.length);
     let duration = 0;
-    const totalDuration = 2500;
+    const minDuration = 3000;
     const interval = 300;
-    let stickTimer: NodeJS.Timeout | null = null;
-    stickTimer = setInterval(() => {
+    if (stickTimer.current) clearInterval(stickTimer.current);
+    stickTimer.current = setInterval(() => {
       duration += interval;
       setAnimatingStick(Math.floor(Math.random() * 3));
-      if (duration >= totalDuration) {
-        if (stickTimer) clearInterval(stickTimer);
-        const finalIdx = Math.floor(Math.random() * luckList.length);
-        setLuckIdx(finalIdx);
-        setProverbIdx(Math.floor(Math.random() * cyberProverbs.length));
-        setTimeout(() => {
-          setAnimatingStick(finalIdx % 3);
-          setIsDrawing(false);
-          // 更新抽签次数
-          const today = getTodayStr();
-          const key = `cyberluck_draw_count_${address}_${today}`;
-          const newCount = drawCount + 1;
-          localStorage.setItem(key, String(newCount));
-          setDrawCount(newCount);
-          if (newCount >= 3) {
-            setDrawTip("今日抽签次数已用完");
-          }
-        }, 300);
+      if (duration >= minDuration) {
+        setAnimationDone(true);
       }
     }, interval);
+    try {
+      const tx = await sendTransactionAsync({
+        to: CONTRACT_ADDRESS,
+        value: parseEther("0.01"),
+      });
+      setMintTip("mint 交易已发送");
+      setTxSent(true);
+    } catch (e: any) {
+      if (stickTimer.current) clearInterval(stickTimer.current);
+      setIsDrawing(false);
+      setTxSent(false);
+      return;
+    }
   }
 
   function shareLuck() {
-    const yiText = luck.yi.join("、");
-    const jiText = luck.ji.join("、");
+    const yiText = luckList[luckIdx || 0].yi.join("、");
+    const jiText = luckList[luckIdx || 0].ji.join("、");
     
     actions?.composeCast &&
       actions.composeCast({
-        text: `我的${getTodayStr()}运势：${luck.text} (${luck.score}分)\n宜：${yiText}\n忌：${jiText}\n箴言：${cyberProverbs[proverbIdx]}\n#CryptoFortune`,
+        text: `我的${getTodayStr()}运势：${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}分)\n宜：${yiText}\n忌：${jiText}\n箴言：${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune`,
         embeds: [window.location.origin]
       });
   }
@@ -163,7 +238,7 @@ export default function CyberLuck() {
               className={`w-3 h-16 border-2 rounded-none transition-colors duration-200 ${
                 isDrawing
                   ? `stick-swing ${animatingStick === i ? "bg-[#ffe066] border-yellow-400" : "bg-[#23243a] border-[#333]"}`
-                  : (luckIdx % 3 === i 
+                  : (luckIdx === i 
                     ? "bg-[#ffe066] border-yellow-400 shadow-[2px_2px_0_#333]" 
                     : "bg-[#23243a] border-[#333]")
               }`}
@@ -188,7 +263,7 @@ export default function CyberLuck() {
         <div className="col-span-1 p-2 border-2 border-green-400 bg-[#1f2b1f] shadow-[2px_2px_0_#333] rounded-none">
           <div className="text-green-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">今日宜</div>
           <ul className="list-none text-[10px] text-green-200 space-y-1">
-            {luck.yi.map((item, i) => (
+            {luckList[luckIdx || 0].yi.map((item, i) => (
               <li key={`yi-${i}`} className="flex items-start">
                 <span className="text-green-300 mr-1 font-bold">+</span> {item}
               </li>
@@ -198,7 +273,7 @@ export default function CyberLuck() {
         <div className="col-span-1 p-2 border-2 border-red-400 bg-[#2b1f1f] shadow-[2px_2px_0_#333] rounded-none">
           <div className="text-red-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">今日忌</div>
           <ul className="list-none text-[10px] text-red-200 space-y-1">
-            {luck.ji.map((item, i) => (
+            {luckList[luckIdx || 0].ji.map((item, i) => (
               <li key={`ji-${i}`} className="flex items-start">
                 <span className="text-red-300 mr-1 font-bold">-</span> {item}
               </li>
@@ -213,7 +288,7 @@ export default function CyberLuck() {
   function renderLuckScore() {
     const blocks = [];
     const totalBlocks = 5;
-    const filledBlocks = Math.round(luck.score / 100 * totalBlocks);
+    const filledBlocks = Math.round(luckList[luckIdx || 0].score / 100 * totalBlocks);
     
     for (let i = 0; i < totalBlocks; i++) {
       blocks.push(
@@ -228,7 +303,7 @@ export default function CyberLuck() {
     
     return (
       <div className="flex flex-col items-center mb-3">
-        <div className="text-xs text-[#ffe066] uppercase mb-1">运势指数: {luck.score}分</div>
+        <div className="text-xs text-[#ffe066] uppercase mb-1">运势指数: {luckList[luckIdx || 0].score}分</div>
         <div className="flex space-x-1">
           {blocks}
         </div>
@@ -242,7 +317,7 @@ export default function CyberLuck() {
       <div className="w-full p-2 border-2 border-blue-400 bg-[#1f1f2b] shadow-[2px_2px_0_#333] rounded-none mb-4">
         <div className="text-blue-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">赛博箴言</div>
         <div className="text-[10px] text-blue-200 italic text-center tracking-wide">
-          『{cyberProverbs[proverbIdx]}』
+          『{cyberProverbs[proverbIdx || 0]}』
         </div>
       </div>
     );
@@ -265,6 +340,10 @@ export default function CyberLuck() {
     );
   }
 
+  // luck 相关渲染逻辑调整
+  const luck = typeof luckIdx === 'number' ? luckList[luckIdx] : null;
+  const proverb = typeof proverbIdx === 'number' ? cyberProverbs[proverbIdx] : null;
+
   return (
     <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
       {/* 背景像素图 */}
@@ -279,33 +358,70 @@ export default function CyberLuck() {
       {/* 内容层 */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
         <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
+        <div className="w-full text-xs text-center mb-2">
+          <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
+            今日剩余抽签次数：{Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
+          </span>
+        </div>
         <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">赛博抽签</h2>
         {renderSticks()}
-        <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
-          {isDrawing ? "抽签中..." : luck.text}
+        <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
+          {isDrawing ? "抽签中..." : (luck ? luck.text : "")}
         </div>
         
-        {!isDrawing && (
+        {!isDrawing && luck && (
           <>
             {renderLuckScore()}
             {renderYiJi()}
-            {renderProverb()}
+            {proverb && renderProverb()}
           </>
         )}
         
-        <button
-          className={`w-full mb-3 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
-            isDrawing || !address || drawCount >= 3
-              ? "bg-gray-500 text-gray-300 cursor-not-allowed"
-              : "bg-[#ffe066] text-black hover:bg-yellow-300 transition"
-          }`}
-          onClick={drawLuck}
-          disabled={isDrawing || !address || drawCount >= 3}
-        >
-          {isDrawing ? "抽签中..." : (!address ? "请先连接钱包" : (drawCount >= 3 ? "今日已达上限" : "抽签"))}
-        </button>
+        <div className="flex flex-row w-full gap-2 mb-3">
+          <button
+            className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
+              isDrawing || !isConnected || drawCount >= MAX_DRAW_COUNT || chainId !== monadTestnet.id
+                ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                : "bg-[#ffe066] text-black hover:bg-yellow-300 transition"
+            }`}
+            onClick={drawLuck}
+            disabled={isDrawing || !isConnected}
+          >
+            {isDrawing || isMinting ? "抽签中..." :
+              (!isConnected ? "请先连接钱包" :
+                (drawCount >= MAX_DRAW_COUNT ? "今日已达上限" : (
+                  <span className="flex flex-col leading-tight items-center justify-center">
+                    <span>DRAW</span>
+                    <span className="text-[10px] font-normal">0.01 MON</span>
+                  </span>
+                ))
+              )
+            }
+          </button>
+          <button
+            className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
+              chainId === monadTestnet.id ? "bg-green-500 text-white" : "bg-red-500 text-white hover:bg-yellow-300 hover:text-black transition"
+            }`}
+            onClick={() => switchChain({ chainId: monadTestnet.id })}
+            disabled={chainId === monadTestnet.id}
+          >
+            {chainId === monadTestnet.id ? "Monad Testnet" : "切换网络"}
+          </button>
+        </div>
         {drawTip && (
           <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip}</div>
+        )}
+        {/* {mintTip && (
+          <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
+        )} */}
+        {/* {isError && (
+          <div className="w-full text-xs text-red-400 text-center mb-2">mint 失败: {error?.message || "未知错误"}</div>
+        )} */}
+        {isSuccess && txHash && (
+          <div className="w-full text-xs text-green-400 text-center mb-2">
+            mint 成功！
+            <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">查看交易</a>
+          </div>
         )}
         <button
           className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
