@@ -315,7 +315,7 @@ export default function CyberLuck() {
 
     return (
       <div className="flex flex-col items-center mb-3">
-        <div className="text-xs text-[#ffe066] uppercase mb-1">运势指数: {luckList[luckIdx || 0].score}分</div>
+        <div className="text-xs text-[#ffe066] uppercase mb-1">Luck Score: {luckList[luckIdx || 0].score}/100</div>
         <div className="flex space-x-1">
           {blocks}
         </div>
