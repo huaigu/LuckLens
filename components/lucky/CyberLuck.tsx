@@ -235,7 +235,7 @@ export default function CyberLuck() {
 
     actions?.composeCast &&
       actions.composeCast({
-        text: `My fortune for ${getTodayStr()}: ${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune`,
+        text: `My fortune for ${getTodayStr()}: ${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune #Monad`,
         embeds: [window.location.origin]
       });
   }
