@@ -10,16 +10,16 @@ const MAX_DRAW_COUNT = 3;
 
 // 赛博箴言列表
 const cyberProverbs = [
-  "币圈一天，人间三年",
-  "上车不要怕，抛售不要慌",
-  "韭菜不割，明年还有",
-  "熊市不焦虑，牛市不贪婪",
-  "不管涨多少，记得落袋为安",
-  "听消息亏钱，看趋势盈利",
-  "量力而行，币不在多",
-  "一切归零，唯有私钥永存",
-  "HODL 到底，熬出黎明",
-  "横盘出真知，暴涨见人性"
+  "One day in crypto, three years in the real world.",
+  "Don't fear buying in, don't panic selling out.",
+  "If you don't harvest the leeks, there will be more next year.",
+  "Stay calm in the bear, stay humble in the bull.",
+  "No matter how much you gain, always secure profits.",
+  "Lose money on rumors, win on trends.",
+  "Invest within your means, it's not about the number of coins.",
+  "Everything can go to zero, only your private key lasts forever.",
+  "HODL till dawn, survive the night.",
+  "Sideways markets reveal wisdom, pumps reveal human nature."
 ];
 
 const luckList = [
@@ -311,19 +311,19 @@ export default function CyberLuck() {
     );
   }
   
-  // 渲染赛博箴言
+  // Render Cyber Proverb
   function renderProverb() {
     return (
       <div className="w-full p-2 border-2 border-blue-400 bg-[#1f1f2b] shadow-[2px_2px_0_#333] rounded-none mb-4">
-        <div className="text-blue-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">赛博箴言</div>
+        <div className="text-blue-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">CYBER PROVERB</div>
         <div className="text-[10px] text-blue-200 italic text-center tracking-wide">
-          『{cyberProverbs[proverbIdx || 0]}』
+          “{cyberProverbs[proverbIdx || 0]}”
         </div>
       </div>
     );
   }
   
-  // 渲染终端 fortune 输出
+  // Render terminal fortune output
   function renderTerminalFortune() {
     return (
       <div className="w-full p-2 border-2 border-green-800 bg-[#0d1a0d] shadow-[2px_2px_0_#333] rounded-none font-mono absolute bottom-0 left-0">
@@ -331,7 +331,7 @@ export default function CyberLuck() {
           root@LuckLens:~# fortune
         </div>
         <div className="text-[10px] text-green-400 mt-1">
-          在区块链的世界里，最大的风险不是亏损，而是错过。
+          In the world of blockchain, the greatest risk is not loss, but missing out.
         </div>
         <div className="text-[10px] text-green-300 mt-2 text-right italic">
           Made with ❤️ by Monad Fans
@@ -360,13 +360,13 @@ export default function CyberLuck() {
         <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
         <div className="w-full text-xs text-center mb-2">
           <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
-            今日剩余抽签次数：{Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
+            Draws left today: {Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
           </span>
         </div>
-        <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">赛博抽签</h2>
+        <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
         {renderSticks()}
         <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
-          {isDrawing ? "抽签中..." : (luck ? luck.text : "")}
+          {isDrawing ? "Drawing..." : (luck ? luck.text : "")}
         </div>
         
         {!isDrawing && luck && (
@@ -387,9 +387,9 @@ export default function CyberLuck() {
             onClick={drawLuck}
             disabled={isDrawing || !isConnected}
           >
-            {isDrawing || isMinting ? "抽签中..." :
-              (!isConnected ? "请先连接钱包" :
-                (drawCount >= MAX_DRAW_COUNT ? "今日已达上限" : (
+            {isDrawing || isMinting ? "Drawing..." :
+              (!isConnected ? "Connect Wallet" :
+                (drawCount >= MAX_DRAW_COUNT ? "No draws left" : (
                   <span className="flex flex-col leading-tight items-center justify-center">
                     <span>DRAW</span>
                     <span className="text-[10px] font-normal">0.01 MON</span>
@@ -405,11 +405,11 @@ export default function CyberLuck() {
             onClick={() => switchChain({ chainId: monadTestnet.id })}
             disabled={chainId === monadTestnet.id}
           >
-            {chainId === monadTestnet.id ? "Monad Testnet" : "切换网络"}
+            {chainId === monadTestnet.id ? "Monad Testnet" : "Switch Network"}
           </button>
         </div>
         {drawTip && (
-          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip}</div>
+          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "请先连接钱包" ? "Please connect your wallet" : drawTip === "请切换到 Monad Testnet 网络" ? "Please switch to Monad Testnet" : drawTip === "今日抽签次数已用完" || drawTip === "今日已达上限" ? "No draws left today" : drawTip}</div>
         )}
         {/* {mintTip && (
           <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
@@ -432,7 +432,7 @@ export default function CyberLuck() {
           onClick={shareLuck}
           disabled={isDrawing}
         >
-          分享运势
+          Share My Fortune
         </button>
         
         {!isDrawing && renderTerminalFortune()}
