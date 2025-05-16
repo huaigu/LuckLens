@@ -96,7 +96,7 @@ export default function CyberLuck() {
   const { sendTransaction, data: txHash, isPending: isMinting, isError, error, isSuccess } = useSendTransaction();
   const { sendTransactionAsync } = useSendTransaction();
   const [txSent, setTxSent] = useState(false);
-  
+
   // 抽签动画状态
   const [isDrawing, setIsDrawing] = useState(false);
   const [animatingStick, setAnimatingStick] = useState(-1);
@@ -111,6 +111,19 @@ export default function CyberLuck() {
   const [animationDone, setAnimationDone] = useState(false);
   const stickTimer = useRef<NodeJS.Timeout | null>(null);
   const finalIdx = useRef(0);
+
+  const [isWarpcast, setIsWarpcast] = useState(true);
+  useEffect(() => {
+    // 检测是否在 Warpcast 内嵌
+    let inside = true;
+    try {
+      // 如果不是 iframe 或 userAgent 不包含 Warpcast
+      inside = window.parent !== window || /Warpcast/i.test(navigator.userAgent);
+    } catch {
+      inside = false;
+    }
+    setIsWarpcast(inside);
+  }, []);
 
   // 页面加载时读取本地抽签结果
   useEffect(() => {
@@ -219,7 +232,7 @@ export default function CyberLuck() {
   function shareLuck() {
     const yiText = luckList[luckIdx || 0].yi.join("、");
     const jiText = luckList[luckIdx || 0].ji.join("、");
-    
+
     actions?.composeCast &&
       actions.composeCast({
         text: `My fortune for ${getTodayStr()}: ${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune`,
@@ -233,15 +246,14 @@ export default function CyberLuck() {
       <div className="flex flex-row items-center justify-center gap-4 mb-4">
         {[0, 1, 2].map((i) => {
           return (
-            <div 
+            <div
               key={i}
-              className={`w-3 h-16 border-2 rounded-none transition-colors duration-200 ${
-                isDrawing
+              className={`w-3 h-16 border-2 rounded-none transition-colors duration-200 ${isDrawing
                   ? `stick-swing ${animatingStick === i ? "bg-[#ffe066] border-yellow-400" : "bg-[#23243a] border-[#333]"}`
-                  : (luckIdx === i 
-                    ? "bg-[#ffe066] border-yellow-400 shadow-[2px_2px_0_#333]" 
+                  : (luckIdx === i
+                    ? "bg-[#ffe066] border-yellow-400 shadow-[2px_2px_0_#333]"
                     : "bg-[#23243a] border-[#333]")
-              }`}
+                }`}
               style={{
                 boxSizing: "border-box",
                 transformOrigin: "bottom center",
@@ -283,24 +295,24 @@ export default function CyberLuck() {
       </div>
     );
   }
-  
+
   // 渲染运势指数
   function renderLuckScore() {
     const blocks = [];
     const totalBlocks = 5;
     const filledBlocks = Math.round(luckList[luckIdx || 0].score / 100 * totalBlocks);
-    
+
     for (let i = 0; i < totalBlocks; i++) {
       blocks.push(
-        <div 
+        <div
           key={`block-${i}`}
-          className={`w-4 h-4 border-2 ${i < filledBlocks 
-            ? "bg-[#ffe066] border-yellow-400" 
+          className={`w-4 h-4 border-2 ${i < filledBlocks
+            ? "bg-[#ffe066] border-yellow-400"
             : "bg-[#23243a] border-[#333]"}`}
         />
       );
     }
-    
+
     return (
       <div className="flex flex-col items-center mb-3">
         <div className="text-xs text-[#ffe066] uppercase mb-1">运势指数: {luckList[luckIdx || 0].score}分</div>
@@ -310,7 +322,7 @@ export default function CyberLuck() {
       </div>
     );
   }
-  
+
   // Render Cyber Proverb
   function renderProverb() {
     return (
@@ -322,7 +334,7 @@ export default function CyberLuck() {
       </div>
     );
   }
-  
+
   // Render terminal fortune output
   function renderTerminalFortune() {
     return (
@@ -346,116 +358,165 @@ export default function CyberLuck() {
 
   return (
     <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
-      {/* 背景像素图 */}
-      {/* <Image
-        src="/images/feed.png"
-        alt="cyber trader background"
-        fill
-        style={{ objectFit: "cover", opacity: 0.18 }}
-        className="pointer-events-none select-none"
-        sizes="100vw"
-      /> */}
-      {/* 内容层 */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
-        <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
-        <div className="w-full text-xs text-center mb-2">
-          <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
-            Draws left today: {Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
-          </span>
-        </div>
-        <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
-        {renderSticks()}
-        <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
-          {isDrawing ? "Drawing..." : (luck ? luck.text : "")}
-        </div>
-        
-        {!isDrawing && luck && (
-          <>
-            {renderLuckScore()}
-            {renderYiJi()}
-            {proverb && renderProverb()}
-          </>
-        )}
-        
-        <div className="flex flex-row w-full gap-2 mb-3">
-          <button
-            className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
-              isDrawing || !isConnected || drawCount >= MAX_DRAW_COUNT || chainId !== monadTestnet.id
-                ? "bg-gray-500 text-gray-300 cursor-not-allowed"
-                : "bg-[#ffe066] text-black hover:bg-yellow-300 transition"
-            }`}
-            onClick={drawLuck}
-            disabled={isDrawing || !isConnected}
-          >
-            {isDrawing || isMinting ? "Drawing..." :
-              (!isConnected ? "Connect Wallet" :
-                (drawCount >= MAX_DRAW_COUNT ? "No draws left" : (
-                  <span className="flex flex-col leading-tight items-center justify-center">
-                    <span>DRAW</span>
-                    <span className="text-[10px] font-normal">0.01 MON</span>
-                  </span>
-                ))
-              )
-            }
-          </button>
-          <button
-            className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
-              chainId === monadTestnet.id ? "bg-green-500 text-white" : "bg-red-500 text-white hover:bg-yellow-300 hover:text-black transition"
-            }`}
-            onClick={() => switchChain({ chainId: monadTestnet.id })}
-            disabled={chainId === monadTestnet.id}
-          >
-            {chainId === monadTestnet.id ? "Monad Testnet" : "Switch Network"}
-          </button>
-        </div>
-        {drawTip && (
-          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "Please connect your wallet" ? "Please connect your wallet" : drawTip === "Please switch to Monad Testnet" ? "Please switch to Monad Testnet" : drawTip === "No draws left today" ? "No draws left today" : drawTip}</div>
-        )}
-        {/* {mintTip && (
-          <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
-        )} */}
-        {/* {isError && (
-          <div className="w-full text-xs text-red-400 text-center mb-2">mint 失败: {error?.message || "未知错误"}</div>
-        )} */}
-        {isSuccess && txHash && (
-          <div className="w-full text-xs text-green-400 text-center mb-2">
-            mint 成功！
-            <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">查看交易</a>
+      {/* warpcast 跳转提示 */}
+      {!isWarpcast ? (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
+          {/* 三根签动画始终开启 */}
+          <div className="flex flex-row items-center justify-center gap-4 mb-8">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className={`w-3 h-16 border-2 rounded-none transition-colors duration-200 stick-swing bg-[#ffe066] border-yellow-400`}
+                style={{
+                  boxSizing: "border-box",
+                  transformOrigin: "bottom center",
+                  animation: `swing 2s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+            ))}
           </div>
-        )}
-        <button
-          className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${
-            isDrawing 
-              ? "bg-gray-500 text-gray-300 cursor-not-allowed" 
-              : "bg-purple-500 text-white hover:bg-purple-400 transition"
-          }`}
-          onClick={shareLuck}
-          disabled={isDrawing}
-        >
-          Share My Fortune
-        </button>
-        
-        {!isDrawing && renderTerminalFortune()}
-      </div>
-      
-      {/* 添加动画关键帧 */}
-      <style jsx global>{`
-        @keyframes swing {
-          0%, 10% {
-            transform: rotate(-20deg);
-          }
-          45%, 55% {
-            transform: rotate(20deg);
-          }
-          90%, 100% {
-            transform: rotate(-20deg);
-          }
-        }
-        
-        .stick-swing {
-          animation-timing-function: ease-in-out;
-        }
-      `}</style>
+          <div className="mb-6 text-center text-sm text-[#ffe066] font-medium max-w-xs">
+            Discover your daily crypto fortune and get a unique on-chain proverb. For the full interactive experience, please open farcaster Mini App in Warpcast.
+          </div>
+          <button
+            className="bg-[#ffe066] text-black font-bold px-6 py-3 rounded shadow-[2px_2px_0_#333] border-2 border-[#333] hover:bg-yellow-300 transition text-lg"
+            onClick={() => {
+              window.open(`https://warpcast.com/?launchFrameUrl=${encodeURIComponent(process.env.NEXT_PUBLIC_URL || '')}`, '_blank');
+            }}
+          >
+            Open in Warpcast
+          </button>
+          {/* 全局动画样式，确保动画生效 */}
+          <style jsx global>{`
+            @keyframes swing {
+              0%, 10% {
+                transform: rotate(-20deg);
+              }
+              45%, 55% {
+                transform: rotate(20deg);
+              }
+              90%, 100% {
+                transform: rotate(-20deg);
+              }
+            }
+            .stick-swing {
+              animation-timing-function: ease-in-out;
+            }
+          `}</style>
+        </div>
+      ) : (
+        <>
+          {/* 背景像素图 */}
+          {/* <Image
+            src="/images/feed.png"
+            alt="cyber trader background"
+            fill
+            style={{ objectFit: "cover", opacity: 0.18 }}
+            className="pointer-events-none select-none"
+            sizes="100vw"
+          /> */}
+          {/* 内容层 */}
+          <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
+            <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
+            <div className="w-full text-xs text-center mb-2">
+              <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
+                Draws left today: {Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
+            {renderSticks()}
+            <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
+              {isDrawing ? "Drawing..." : (luck ? luck.text : "")}
+            </div>
+
+            {!isDrawing && luck && (
+              <>
+                {renderLuckScore()}
+                {renderYiJi()}
+                {proverb && renderProverb()}
+              </>
+            )}
+
+            <div className="flex flex-row w-full gap-2 mb-3">
+              <button
+                className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${isDrawing || !isConnected || drawCount >= MAX_DRAW_COUNT || chainId !== monadTestnet.id
+                    ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                    : "bg-[#ffe066] text-black hover:bg-yellow-300 transition"
+                  }`}
+                onClick={drawLuck}
+                disabled={isDrawing || !isConnected}
+              >
+                {isDrawing || isMinting ? "Drawing..." :
+                  (!isConnected ? "Connect Wallet" :
+                    (drawCount >= MAX_DRAW_COUNT ? "No draws left" : (
+                      <span className="flex flex-col leading-tight items-center justify-center">
+                        <span>DRAW</span>
+                        <span className="text-[10px] font-normal">0.01 MON</span>
+                      </span>
+                    ))
+                  )
+                }
+              </button>
+              <button
+                className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${chainId === monadTestnet.id ? "bg-green-500 text-white" : "bg-red-500 text-white hover:bg-yellow-300 hover:text-black transition"
+                  }`}
+                onClick={() => switchChain({ chainId: monadTestnet.id })}
+                disabled={chainId === monadTestnet.id}
+              >
+                {chainId === monadTestnet.id ? "Monad Testnet" : "Switch Network"}
+              </button>
+            </div>
+            {drawTip && (
+              <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "Please connect your wallet" ? "Please connect your wallet" : drawTip === "Please switch to Monad Testnet" ? "Please switch to Monad Testnet" : drawTip === "No draws left today" ? "No draws left today" : drawTip}</div>
+            )}
+            {/* {mintTip && (
+              <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
+            )} */}
+            {/* {isError && (
+              <div className="w-full text-xs text-red-400 text-center mb-2">mint 失败: {error?.message || "未知错误"}</div>
+            )} */}
+            {isSuccess && txHash && (
+              <div className="w-full text-xs text-green-400 text-center mb-2">
+                mint 成功！
+                <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">查看交易</a>
+              </div>
+            )}
+            <button
+              className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${isDrawing
+                  ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                  : "bg-purple-500 text-white hover:bg-purple-400 transition"
+                }`}
+              onClick={shareLuck}
+              disabled={isDrawing}
+            >
+              Share My Fortune
+            </button>
+
+            {!isDrawing && renderTerminalFortune()}
+          </div>
+
+          {/* 添加动画关键帧 */}
+          <style jsx global>{`
+            @keyframes swing {
+              0%, 10% {
+                transform: rotate(-20deg);
+              }
+              45%, 55% {
+                transform: rotate(20deg);
+              }
+              90%, 100% {
+                transform: rotate(-20deg);
+              }
+            }
+            
+            .stick-swing {
+              animation-timing-function: ease-in-out;
+            }
+          `}</style>
+        </>
+      )}
     </div>
   );
 } 
