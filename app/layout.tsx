@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: "Crypto Fortune",
-  description: "抽取今日交易运势，获取专属赛博箴言",
+  description: "draw today's trading fortune and get your own cyber proverb",
 };
 
 export default function RootLayout({

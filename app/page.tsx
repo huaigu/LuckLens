@@ -26,8 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(APP_URL),
     title: "Crypto Fortune",
     openGraph: {
-      title: "Crypto Fortune 赛博抽签",
-      description: "抽取今日交易运势，获取专属赛博箴言",
+      title: "Crypto Fortune",
+      description: "draw today's trading fortune and get your own cyber proverb",
       images: [`${APP_URL}/images/share.jpg`], // 用数组包裹
     },
     other: {

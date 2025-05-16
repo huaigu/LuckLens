@@ -23,46 +23,46 @@ const cyberProverbs = [
 ];
 
 const luckList = [
-  { 
-    text: "极佳运势 🚀", 
-    color: "text-green-400", 
-    yi: ["大胆交易，勇敢出击", "参与空投，抓住机会", "布局长线，扩大份额"],
-    ji: ["犹豫不决，错失良机", "过度谨慎，提前出局"],
+  {
+    text: "Moonshot 🚀",
+    color: "text-green-400",
+    yi: ["Ape in", "Claim airdrop", "Hold strong"],
+    ji: ["Hesitate", "Exit too early"],
     score: 95
   },
-  { 
-    text: "好运连连 💰", 
-    color: "text-yellow-300", 
-    yi: ["关注新币，积极参与", "跟随趋势，顺势而为"], 
-    ji: ["贪心冒进，频繁换仓", "借钱投资，超出能力"],
+  {
+    text: "Bullish 💰",
+    color: "text-yellow-300",
+    yi: ["Watch new tokens", "Ride the trend"],
+    ji: ["Overtrade", "Leverage up"],
     score: 80
   },
-  { 
-    text: "普通运势 🤖", 
-    color: "text-blue-300", 
-    yi: ["稳健持仓，学习新知", "适度分散，控制风险"], 
-    ji: ["盲目跟风，追涨杀跌", "情绪交易，冲动决策"],
+  {
+    text: "Steady 🤖",
+    color: "text-blue-300",
+    yi: ["DCA", "Learn something new"],
+    ji: ["FOMO buy", "Panic sell"],
     score: 60
   },
-  { 
-    text: "小心波动 ⚡", 
-    color: "text-orange-400", 
-    yi: ["设置止损，谨慎加仓", "复盘策略，保持清醒"], 
-    ji: ["重仓单一，情绪化操作", "透支资金，无视风险"],
+  {
+    text: "Volatile ⚡",
+    color: "text-orange-400",
+    yi: ["Set stop-loss", "Review your plan"],
+    ji: ["All-in one coin", "Emotional trade"],
     score: 40
   },
-  { 
-    text: "倒霉一天 🥲", 
-    color: "text-red-400", 
-    yi: ["休息观望，复盘总结", "远离交易，恢复心态"], 
-    ji: ["冲动交易，逆势加仓", "强行抄底，连续追高"],
+  {
+    text: "Bearish 🥲",
+    color: "text-red-400",
+    yi: ["Take a break", "Reflect"],
+    ji: ["Chase pumps", "Buy the dip blindly"],
     score: 20
   },
-  { 
-    text: "谨慎交易 🧊", 
-    color: "text-cyan-300", 
-    yi: ["多看少动，关注安全", "检查私钥，备份钱包"], 
-    ji: ["轻信消息，泄露私钥", "操作频繁，忘记备份"],
+  {
+    text: "Cautious 🧊",
+    color: "text-cyan-300",
+    yi: ["Check wallet safety", "Backup keys"],
+    ji: ["Trust rumors", "Forget backup"],
     score: 30
   },
 ];
@@ -160,7 +160,7 @@ export default function CyberLuck() {
         localStorage.setItem(key, String(newCount));
         setDrawCount(newCount);
         if (newCount >= MAX_DRAW_COUNT) {
-          setDrawTip("今日抽签次数已用完");
+          setDrawTip("No draws left today");
         }
       }
       setTimeout(() => {
@@ -173,15 +173,15 @@ export default function CyberLuck() {
 
   async function drawLuck() {
     if (!isConnected) {
-      setDrawTip("请先连接钱包");
+      setDrawTip("Please connect your wallet");
       return;
     }
     if (chainId !== monadTestnet.id) {
-      setDrawTip("请切换到 Monad Testnet 网络");
+      setDrawTip("Please switch to Monad Testnet");
       return;
     }
     if (drawCount >= MAX_DRAW_COUNT) {
-      setDrawTip("今日抽签次数已用完");
+      setDrawTip("No draws left today");
       return;
     }
     if (isDrawing) return;
@@ -222,7 +222,7 @@ export default function CyberLuck() {
     
     actions?.composeCast &&
       actions.composeCast({
-        text: `我的${getTodayStr()}运势：${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}分)\n宜：${yiText}\n忌：${jiText}\n箴言：${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune`,
+        text: `My fortune for ${getTodayStr()}: ${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune`,
         embeds: [window.location.origin]
       });
   }
@@ -261,7 +261,7 @@ export default function CyberLuck() {
     return (
       <div className="w-full grid grid-cols-2 gap-3 mb-3">
         <div className="col-span-1 p-2 border-2 border-green-400 bg-[#1f2b1f] shadow-[2px_2px_0_#333] rounded-none">
-          <div className="text-green-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">今日宜</div>
+          <div className="text-green-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">DO</div>
           <ul className="list-none text-[10px] text-green-200 space-y-1">
             {luckList[luckIdx || 0].yi.map((item, i) => (
               <li key={`yi-${i}`} className="flex items-start">
@@ -271,7 +271,7 @@ export default function CyberLuck() {
           </ul>
         </div>
         <div className="col-span-1 p-2 border-2 border-red-400 bg-[#2b1f1f] shadow-[2px_2px_0_#333] rounded-none">
-          <div className="text-red-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">今日忌</div>
+          <div className="text-red-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">DON&apos;T</div>
           <ul className="list-none text-[10px] text-red-200 space-y-1">
             {luckList[luckIdx || 0].ji.map((item, i) => (
               <li key={`ji-${i}`} className="flex items-start">
@@ -317,7 +317,7 @@ export default function CyberLuck() {
       <div className="w-full p-2 border-2 border-blue-400 bg-[#1f1f2b] shadow-[2px_2px_0_#333] rounded-none mb-4">
         <div className="text-blue-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">CYBER PROVERB</div>
         <div className="text-[10px] text-blue-200 italic text-center tracking-wide">
-          “{cyberProverbs[proverbIdx || 0]}”
+          &ldquo;{cyberProverbs[proverbIdx || 0]}&rdquo;
         </div>
       </div>
     );
@@ -409,7 +409,7 @@ export default function CyberLuck() {
           </button>
         </div>
         {drawTip && (
-          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "请先连接钱包" ? "Please connect your wallet" : drawTip === "请切换到 Monad Testnet 网络" ? "Please switch to Monad Testnet" : drawTip === "今日抽签次数已用完" || drawTip === "今日已达上限" ? "No draws left today" : drawTip}</div>
+          <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "Please connect your wallet" ? "Please connect your wallet" : drawTip === "Please switch to Monad Testnet" ? "Please switch to Monad Testnet" : drawTip === "No draws left today" ? "No draws left today" : drawTip}</div>
         )}
         {/* {mintTip && (
           <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
