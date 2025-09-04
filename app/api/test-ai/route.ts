@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { generateText } from 'ai';
 import { AI_CONFIG, isAIConfigured } from '@/lib/ai-config';
 
-// Configure OpenAI client for OpenRouter
-const client = createOpenAI({
+// Configure OpenAI Compatible client for OpenRouter
+const client = createOpenAICompatible({
+  name: 'openrouter',
   baseURL: AI_CONFIG.OPENROUTER.BASE_URL,
   apiKey: AI_CONFIG.OPENROUTER.API_KEY || '',
 });

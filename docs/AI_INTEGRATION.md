@@ -34,7 +34,7 @@ DEEPSEEK_MODEL="deepseek/deepseek-chat"
 
 The required dependencies are already installed:
 - `ai` - Vercel AI SDK
-- `openai` - OpenAI-compatible client
+- `@ai-sdk/openai-compatible` - OpenAI-compatible client for better compatibility
 - `zod` - Schema validation
 
 ## API Endpoints

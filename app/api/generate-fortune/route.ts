@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { AI_CONFIG, getFortunePrompt, getFallbackPrompt, isAIConfigured } from '@/lib/ai-config';
@@ -25,8 +25,9 @@ const FortuneSchema = z.object({
   proverbs: z.array(z.string()).length(10).describe("10 crypto wisdom proverbs (each 8-15 words)")
 });
 
-// Configure OpenAI client for OpenRouter
-const client = createOpenAI({
+// Configure OpenAI Compatible client for OpenRouter
+const client = createOpenAICompatible({
+  name: 'openrouter',
   baseURL: AI_CONFIG.OPENROUTER.BASE_URL,
   apiKey: AI_CONFIG.OPENROUTER.API_KEY || '',
 });
