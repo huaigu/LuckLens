@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useMiniAppContext } from "@/hooks/use-miniapp-context";
-import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
+import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { parseEther, encodeFunctionData } from "viem";
 import { monadTestnet } from "viem/chains";
 
 const MAX_DRAW_COUNT = 3;
@@ -95,6 +95,7 @@ export default function CyberLuck() {
   const { switchChain } = useSwitchChain();
   const { sendTransaction, data: txHash, isPending: isMinting, isError, error, isSuccess } = useSendTransaction();
   const { sendTransactionAsync } = useSendTransaction();
+  const { writeContract, data: contractTxHash, isPending: isContractMinting, isError: isContractError, error: contractError, isSuccess: isContractSuccess } = useWriteContract();
   const [txSent, setTxSent] = useState(false);
 
   // 抽签动画状态
@@ -215,23 +216,33 @@ export default function CyberLuck() {
       }
     }, interval);
     try {
+      // 编码合约调用数据 - mint() 无参数函数
+      const data = encodeFunctionData({
+        abi: CONTRACT_ABI,
+        functionName: 'mint',
+        args: []
+      });
+
       const tx = await sendTransactionAsync({
         to: CONTRACT_ADDRESS,
         value: parseEther("0.01"),
+        data: data,
       });
-      setMintTip("mint 交易已发送");
+      setMintTip("Mint transaction sent");
       setTxSent(true);
     } catch (e: any) {
       if (stickTimer.current) clearInterval(stickTimer.current);
       setIsDrawing(false);
       setTxSent(false);
+      console.error("Mint transaction failed:", e);
+      setDrawTip(`Transaction failed: ${e.message || "Unknown error"}`);
       return;
     }
   }
 
   function shareLuck() {
-    const yiText = luckList[luckIdx || 0].yi.join("、");
-    const jiText = luckList[luckIdx || 0].ji.join("、");
+    const yiText = luckList[luckIdx || 0].yi.join(", ");
+    const jiText = luckList[luckIdx || 0].ji.join(", ");
 
     actions?.composeCast &&
       actions.composeCast({
@@ -471,16 +482,16 @@ export default function CyberLuck() {
             {drawTip && (
               <div className="w-full text-xs text-red-400 text-center mb-2">{drawTip === "Please connect your wallet" ? "Please connect your wallet" : drawTip === "Please switch to Monad Testnet" ? "Please switch to Monad Testnet" : drawTip === "No draws left today" ? "No draws left today" : drawTip}</div>
             )}
-            {/* {mintTip && (
+            {mintTip && (
               <div className="w-full text-xs text-purple-400 text-center mb-2">{mintTip}</div>
-            )} */}
-            {/* {isError && (
-              <div className="w-full text-xs text-red-400 text-center mb-2">mint 失败: {error?.message || "未知错误"}</div>
-            )} */}
+            )}
+            {isError && (
+              <div className="w-full text-xs text-red-400 text-center mb-2">Mint failed: {error?.message || "Unknown error"}</div>
+            )}
             {isSuccess && txHash && (
               <div className="w-full text-xs text-green-400 text-center mb-2">
-                mint 成功！
-                <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">查看交易</a>
+                Mint successful!
+                <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">View Transaction</a>
               </div>
             )}
             <button
