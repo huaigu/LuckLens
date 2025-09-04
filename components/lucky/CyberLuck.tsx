@@ -2,70 +2,15 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useMiniAppContext } from "@/hooks/use-miniapp-context";
-import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther, encodeFunctionData } from "viem";
 import { monadTestnet } from "viem/chains";
+import { generateFortuneContent, getCachedFortuneContent, type FortuneItem, type GeneratedContent } from "@/lib/fortune-generator";
 
 const MAX_DRAW_COUNT = 3;
 
-// 赛博箴言列表
-const cyberProverbs = [
-  "One day in crypto, three years in the real world.",
-  "Don't fear buying in, don't panic selling out.",
-  "If you don't harvest the leeks, there will be more next year.",
-  "Stay calm in the bear, stay humble in the bull.",
-  "No matter how much you gain, always secure profits.",
-  "Lose money on rumors, win on trends.",
-  "Invest within your means, it's not about the number of coins.",
-  "Everything can go to zero, only your private key lasts forever.",
-  "HODL till dawn, survive the night.",
-  "Sideways markets reveal wisdom, pumps reveal human nature."
-];
-
-const luckList = [
-  {
-    text: "Moonshot 🚀",
-    color: "text-green-400",
-    yi: ["Ape in", "Claim airdrop", "Hold strong"],
-    ji: ["Hesitate", "Exit too early"],
-    score: 95
-  },
-  {
-    text: "Bullish 💰",
-    color: "text-yellow-300",
-    yi: ["Watch new tokens", "Ride the trend"],
-    ji: ["Overtrade", "Leverage up"],
-    score: 80
-  },
-  {
-    text: "Steady 🤖",
-    color: "text-blue-300",
-    yi: ["DCA", "Learn something new"],
-    ji: ["FOMO buy", "Panic sell"],
-    score: 60
-  },
-  {
-    text: "Volatile ⚡",
-    color: "text-orange-400",
-    yi: ["Set stop-loss", "Review your plan"],
-    ji: ["All-in one coin", "Emotional trade"],
-    score: 40
-  },
-  {
-    text: "Bearish 🥲",
-    color: "text-red-400",
-    yi: ["Take a break", "Reflect"],
-    ji: ["Chase pumps", "Buy the dip blindly"],
-    score: 20
-  },
-  {
-    text: "Cautious 🧊",
-    color: "text-cyan-300",
-    yi: ["Check wallet safety", "Backup keys"],
-    ji: ["Trust rumors", "Forget backup"],
-    score: 30
-  },
-];
+// Static arrays replaced with AI-generated content
+// See lib/fortune-generator.ts for fallback content and generation logic
 
 function getTodayStr() {
   const d = new Date();
@@ -93,10 +38,13 @@ export default function CyberLuck() {
   const { actions } = useMiniAppContext();
   const { address, chainId, isConnected } = useAccount();
   const { switchChain } = useSwitchChain();
-  const { sendTransaction, data: txHash, isPending: isMinting, isError, error, isSuccess } = useSendTransaction();
+  const { data: txHash, isPending: isMinting, isError, error, isSuccess } = useSendTransaction();
   const { sendTransactionAsync } = useSendTransaction();
-  const { writeContract, data: contractTxHash, isPending: isContractMinting, isError: isContractError, error: contractError, isSuccess: isContractSuccess } = useWriteContract();
   const [txSent, setTxSent] = useState(false);
+
+  // AI-generated content state
+  const [fortuneContent, setFortuneContent] = useState<GeneratedContent | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
 
   // 抽签动画状态
   const [isDrawing, setIsDrawing] = useState(false);
@@ -114,6 +62,33 @@ export default function CyberLuck() {
   const finalIdx = useRef(0);
 
   const [isWarpcast, setIsWarpcast] = useState(true);
+
+  // Initialize AI-generated content
+  useEffect(() => {
+    const initializeContent = async () => {
+      setIsLoadingContent(true);
+      try {
+        // Try to get cached content first, then generate if needed
+        let content = getCachedFortuneContent();
+
+        // If no cached content or cache is expired, generate new content
+        if (!content || content === getCachedFortuneContent()) {
+          content = await generateFortuneContent(true);
+        }
+
+        setFortuneContent(content);
+      } catch (error) {
+        console.error('Failed to initialize fortune content:', error);
+        // Use fallback content
+        setFortuneContent(getCachedFortuneContent());
+      } finally {
+        setIsLoadingContent(false);
+      }
+    };
+
+    initializeContent();
+  }, []);
+
   useEffect(() => {
     // 检测是否在 Warpcast 内嵌
     let inside = true;
@@ -162,7 +137,11 @@ export default function CyberLuck() {
     if (animationDone) {
       if (stickTimer.current) clearInterval(stickTimer.current);
       const lidx = finalIdx.current;
-      const pidx = Math.floor(Math.random() * cyberProverbs.length);
+
+      // Use AI-generated content or fallback
+      const currentContent = fortuneContent || getCachedFortuneContent();
+      const pidx = Math.floor(Math.random() * currentContent.proverbs.length);
+
       setLuckIdx(lidx);
       setProverbIdx(pidx);
       if (address) {
@@ -203,7 +182,10 @@ export default function CyberLuck() {
     setMintTip("");
     setTxSent(false);
     setAnimationDone(false);
-    finalIdx.current = Math.floor(Math.random() * luckList.length);
+
+    // Use AI-generated content or fallback to static content
+    const currentContent = fortuneContent || getCachedFortuneContent();
+    finalIdx.current = Math.floor(Math.random() * currentContent.fortunes.length);
     let duration = 0;
     const minDuration = 3000;
     const interval = 300;
@@ -223,7 +205,7 @@ export default function CyberLuck() {
         args: []
       });
 
-      const tx = await sendTransactionAsync({
+      await sendTransactionAsync({
         to: CONTRACT_ADDRESS,
         value: parseEther("0.01"),
         data: data,
@@ -241,12 +223,17 @@ export default function CyberLuck() {
   }
 
   function shareLuck() {
-    const yiText = luckList[luckIdx || 0].yi.join(", ");
-    const jiText = luckList[luckIdx || 0].ji.join(", ");
+    // Use AI-generated content or fallback
+    const currentContent = fortuneContent || getCachedFortuneContent();
+    const currentFortune = currentContent.fortunes[luckIdx || 0];
+    const currentProverb = currentContent.proverbs[proverbIdx || 0];
+
+    const yiText = currentFortune.yi.join(", ");
+    const jiText = currentFortune.ji.join(", ");
 
     actions?.composeCast &&
       actions.composeCast({
-        text: `My fortune for ${getTodayStr()}: ${luckList[luckIdx || 0].text} (${luckList[luckIdx || 0].score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${cyberProverbs[proverbIdx || 0]}\n#CryptoFortune #Monad`,
+        text: `My fortune for ${getTodayStr()}: ${currentFortune.text} (${currentFortune.score}/100)\nDO: ${yiText}\nDON'T: ${jiText}\nProverb: ${currentProverb}\n#CryptoFortune #Monad`,
         embeds: [window.location.origin]
       });
   }
@@ -281,12 +268,16 @@ export default function CyberLuck() {
 
   // 宜忌列表
   function renderYiJi() {
+    // Use AI-generated content or fallback
+    const currentContent = fortuneContent || getCachedFortuneContent();
+    const currentFortune = currentContent.fortunes[luckIdx || 0];
+
     return (
       <div className="w-full grid grid-cols-2 gap-3 mb-3">
         <div className="col-span-1 p-2 border-2 border-green-400 bg-[#1f2b1f] shadow-[2px_2px_0_#333] rounded-none">
           <div className="text-green-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">DO</div>
           <ul className="list-none text-[10px] text-green-200 space-y-1">
-            {luckList[luckIdx || 0].yi.map((item, i) => (
+            {currentFortune.yi.map((item, i) => (
               <li key={`yi-${i}`} className="flex items-start">
                 <span className="text-green-300 mr-1 font-bold">+</span> {item}
               </li>
@@ -296,7 +287,7 @@ export default function CyberLuck() {
         <div className="col-span-1 p-2 border-2 border-red-400 bg-[#2b1f1f] shadow-[2px_2px_0_#333] rounded-none">
           <div className="text-red-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">DON&apos;T</div>
           <ul className="list-none text-[10px] text-red-200 space-y-1">
-            {luckList[luckIdx || 0].ji.map((item, i) => (
+            {currentFortune.ji.map((item, i) => (
               <li key={`ji-${i}`} className="flex items-start">
                 <span className="text-red-300 mr-1 font-bold">-</span> {item}
               </li>
@@ -309,9 +300,13 @@ export default function CyberLuck() {
 
   // 渲染运势指数
   function renderLuckScore() {
+    // Use AI-generated content or fallback
+    const currentContent = fortuneContent || getCachedFortuneContent();
+    const currentFortune = currentContent.fortunes[luckIdx || 0];
+
     const blocks = [];
     const totalBlocks = 5;
-    const filledBlocks = Math.round(luckList[luckIdx || 0].score / 100 * totalBlocks);
+    const filledBlocks = Math.round(currentFortune.score / 100 * totalBlocks);
 
     for (let i = 0; i < totalBlocks; i++) {
       blocks.push(
@@ -326,7 +321,7 @@ export default function CyberLuck() {
 
     return (
       <div className="flex flex-col items-center mb-3">
-        <div className="text-xs text-[#ffe066] uppercase mb-1">Luck Score: {luckList[luckIdx || 0].score}/100</div>
+        <div className="text-xs text-[#ffe066] uppercase mb-1">Luck Score: {currentFortune.score}/100</div>
         <div className="flex space-x-1">
           {blocks}
         </div>
@@ -336,11 +331,15 @@ export default function CyberLuck() {
 
   // Render Cyber Proverb
   function renderProverb() {
+    // Use AI-generated content or fallback
+    const currentContent = fortuneContent || getCachedFortuneContent();
+    const currentProverb = currentContent.proverbs[proverbIdx || 0];
+
     return (
       <div className="w-full p-2 border-2 border-blue-400 bg-[#1f1f2b] shadow-[2px_2px_0_#333] rounded-none mb-4">
         <div className="text-blue-300 text-xs font-bold mb-1 uppercase drop-shadow-[1px_1px_0_#333]">CYBER PROVERB</div>
         <div className="text-[10px] text-blue-200 italic text-center tracking-wide">
-          &ldquo;{cyberProverbs[proverbIdx || 0]}&rdquo;
+          &ldquo;{currentProverb}&rdquo;
         </div>
       </div>
     );
@@ -363,9 +362,10 @@ export default function CyberLuck() {
     );
   }
 
-  // luck 相关渲染逻辑调整
-  const luck = typeof luckIdx === 'number' ? luckList[luckIdx] : null;
-  const proverb = typeof proverbIdx === 'number' ? cyberProverbs[proverbIdx] : null;
+  // luck 相关渲染逻辑调整 - 使用AI生成的内容
+  const currentContent = fortuneContent || getCachedFortuneContent();
+  const luck = typeof luckIdx === 'number' ? currentContent.fortunes[luckIdx] : null;
+  const proverb = typeof proverbIdx === 'number' ? currentContent.proverbs[proverbIdx] : null;
 
   return (
     <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
@@ -439,7 +439,7 @@ export default function CyberLuck() {
             <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
             {renderSticks()}
             <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
-              {isDrawing ? "Drawing..." : (luck ? luck.text : "")}
+              {isLoadingContent ? "Loading fortune..." : (isDrawing ? "Drawing..." : (luck ? luck.text : ""))}
             </div>
 
             {!isDrawing && luck && (
