@@ -165,6 +165,10 @@ export default function CyberLuck() {
   }, [animationDone, txSent, isDrawing]);
 
   async function drawLuck() {
+    // Clear all error messages at the start of new draw
+    setDrawTip("");
+    setMintTip("");
+
     if (!isConnected) {
       setDrawTip("Please connect your wallet");
       return;
@@ -179,25 +183,44 @@ export default function CyberLuck() {
     }
     if (isDrawing) return;
     setIsDrawing(true);
-    setMintTip("");
     setTxSent(false);
     setAnimationDone(false);
 
-    // Use AI-generated content or fallback to static content
-    const currentContent = fortuneContent || getCachedFortuneContent();
-    finalIdx.current = Math.floor(Math.random() * currentContent.fortunes.length);
-    let duration = 0;
-    const minDuration = 3000;
-    const interval = 300;
-    if (stickTimer.current) clearInterval(stickTimer.current);
-    stickTimer.current = setInterval(() => {
-      duration += interval;
-      setAnimatingStick(Math.floor(Math.random() * 3));
-      if (duration >= minDuration) {
-        setAnimationDone(true);
-      }
-    }, interval);
     try {
+      // Step 1: Generate fresh AI content for this draw
+      setMintTip("Generating fortune...");
+      let currentContent: GeneratedContent;
+
+      try {
+        // Try to generate fresh content with market context
+        currentContent = await generateFortuneContent(true);
+        setFortuneContent(currentContent);
+        setMintTip("Fortune generated, preparing draw...");
+      } catch (aiError) {
+        console.warn("AI generation failed, using cached content:", aiError);
+        // Fallback to cached content if AI generation fails
+        currentContent = fortuneContent || getCachedFortuneContent();
+        setMintTip("Using cached fortune, preparing draw...");
+      }
+
+      // Step 2: Start the drawing animation
+      finalIdx.current = Math.floor(Math.random() * currentContent.fortunes.length);
+      let duration = 0;
+      const minDuration = 3000;
+      const interval = 300;
+
+      if (stickTimer.current) clearInterval(stickTimer.current);
+      stickTimer.current = setInterval(() => {
+        duration += interval;
+        setAnimatingStick(Math.floor(Math.random() * 3));
+        if (duration >= minDuration) {
+          setAnimationDone(true);
+        }
+      }, interval);
+
+      // Step 3: Prepare and send blockchain transaction
+      setMintTip("Preparing mint transaction...");
+
       // 编码合约调用数据 - mint() 无参数函数
       const data = encodeFunctionData({
         abi: CONTRACT_ABI,
@@ -210,13 +233,15 @@ export default function CyberLuck() {
         value: parseEther("0.01"),
         data: data,
       });
+
       setMintTip("Mint transaction sent");
       setTxSent(true);
+
     } catch (e: any) {
       if (stickTimer.current) clearInterval(stickTimer.current);
       setIsDrawing(false);
       setTxSent(false);
-      console.error("Mint transaction failed:", e);
+      console.error("Draw process failed:", e);
       setDrawTip(`Transaction failed: ${e.message || "Unknown error"}`);
       return;
     }

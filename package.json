@@ -4,12 +4,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H localhost",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.23",
     "@farcaster/auth-client": "^0.3.0",
     "@farcaster/frame-node": "^0.0.22",
     "@farcaster/frame-sdk": "^0.0.36",

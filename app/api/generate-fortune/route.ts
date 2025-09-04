@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { AI_CONFIG, getFortunePrompt, getFallbackPrompt, isAIConfigured } from '@/lib/ai-config';
@@ -26,9 +26,9 @@ const FortuneSchema = z.object({
 });
 
 // Configure OpenAI client for OpenRouter
-const client = openai({
+const client = createOpenAI({
   baseURL: AI_CONFIG.OPENROUTER.BASE_URL,
-  apiKey: AI_CONFIG.OPENROUTER.API_KEY,
+  apiKey: AI_CONFIG.OPENROUTER.API_KEY || '',
 });
 
 export async function POST(request: NextRequest) {
@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
       schema: FortuneSchema,
       prompt,
       temperature: AI_CONFIG.GENERATION.TEMPERATURE,
-      maxTokens: AI_CONFIG.GENERATION.MAX_TOKENS,
     });
 
     return NextResponse.json(result.object);
@@ -83,7 +82,6 @@ export async function GET() {
       schema: FortuneSchema,
       prompt,
       temperature: AI_CONFIG.GENERATION.TEMPERATURE,
-      maxTokens: AI_CONFIG.GENERATION.MAX_TOKENS,
     });
 
     return NextResponse.json(result.object);
