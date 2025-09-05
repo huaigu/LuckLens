@@ -446,28 +446,45 @@ export default function CyberLuck() {
             sizes="100vw"
           /> */}
           {/* 内容层 */}
-          <div className="relative z-10 flex flex-col items-center w-full min-h-full p-4 pb-16 overflow-y-auto">
-            <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
-            <div className="w-full text-xs text-center mb-2">
-              <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
-                Draws left today: {Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
-              </span>
-            </div>
-            <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
-            {renderSticks()}
-            <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
-              {isLoadingContent ? "Loading fortune..." : (isDrawing ? "Drawing..." : (luck ? luck.text : ""))}
+          <div className="relative z-10 flex flex-col items-center justify-between w-full min-h-full p-4 pb-16 overflow-y-auto">
+            {/* 上部分内容 */}
+            <div className="flex flex-col items-center w-full">
+              <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
+              <div className="w-full text-xs text-center mb-2">
+                <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
+                  Draws left today: {Math.max(0, MAX_DRAW_COUNT - drawCount)} / {MAX_DRAW_COUNT}
+                </span>
+              </div>
+              <h2 className="text-base font-bold text-[#ffe066] tracking-widest uppercase drop-shadow-[2px_2px_0_#333] mb-2 text-center">Cyber Fortune Draw</h2>
+              {renderSticks()}
+              <div className={`font-bold text-center text-xl mb-2 drop-shadow-[2px_2px_0_#333] ${isDrawing ? "text-gray-500" : luck?.color} break-words whitespace-normal transition-colors duration-300`} style={{ minHeight: 30 }}>
+                {isLoadingContent ? "Loading fortune..." : (isDrawing ? "Drawing..." : (luck ? luck.text : ""))}
+              </div>
+
+              {isDrawing ? (
+                // Drawing状态下的占位内容，保持布局一致
+                <div className="flex flex-col items-center w-full mb-4">
+                  <div className="w-full h-16 bg-[#23243a] border-2 border-[#333] rounded-none mb-4 flex items-center justify-center">
+                    <div className="text-gray-500 text-sm animate-pulse">Preparing your fortune...</div>
+                  </div>
+                  <div className="w-full h-20 bg-[#23243a] border-2 border-[#333] rounded-none mb-4 flex items-center justify-center">
+                    <div className="text-gray-500 text-sm animate-pulse">Analyzing market conditions...</div>
+                  </div>
+                </div>
+              ) : (
+                luck && (
+                  <>
+                    {renderLuckScore()}
+                    {renderYiJi()}
+                    {proverb && renderProverb()}
+                  </>
+                )
+              )}
             </div>
 
-            {!isDrawing && luck && (
-              <>
-                {renderLuckScore()}
-                {renderYiJi()}
-                {proverb && renderProverb()}
-              </>
-            )}
-
-            <div className="flex flex-row w-full gap-2 mb-3">
+            {/* 下部分内容 - 按钮和状态信息 */}
+            <div className="flex flex-col items-center w-full mt-auto">
+              <div className="flex flex-row w-full gap-2 mb-3">
               <button
                 className={`flex-1 min-w-0 rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${isDrawing || !isConnected || drawCount >= MAX_DRAW_COUNT || chainId !== monadTestnet.id
                     ? "bg-gray-500 text-gray-300 cursor-not-allowed"
@@ -511,18 +528,19 @@ export default function CyberLuck() {
                 <a href={`https://testnet.monadexplorer.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline ml-1">View Transaction</a>
               </div>
             )}
-            <button
-              className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal mb-4 ${isDrawing
-                  ? "bg-gray-500 text-gray-300 cursor-not-allowed"
-                  : "bg-purple-500 text-white hover:bg-purple-400 transition"
-                }`}
-              onClick={shareLuck}
-              disabled={isDrawing}
-            >
-              Share My Fortune
-            </button>
+              <button
+                className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal mb-4 ${isDrawing
+                    ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                    : "bg-purple-500 text-white hover:bg-purple-400 transition"
+                  }`}
+                onClick={shareLuck}
+                disabled={isDrawing}
+              >
+                Share My Fortune
+              </button>
 
-            {!isDrawing && renderTerminalFortune()}
+              {!isDrawing && renderTerminalFortune()}
+            </div>
           </div>
 
           {/* 添加动画关键帧 */}
