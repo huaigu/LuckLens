@@ -446,9 +446,9 @@ export default function CyberLuck() {
             sizes="100vw"
           /> */}
           {/* 内容层 */}
-          <div className="relative z-10 flex flex-col items-center justify-between w-full min-h-full p-4 pb-16 overflow-y-auto">
+          <div className="relative z-10 flex flex-col items-center justify-between w-full h-full p-4 pb-16 overflow-y-auto">
             {/* 上部分内容 */}
-            <div className="flex flex-col items-center w-full">
+            <div className="flex flex-col items-center w-full flex-1">
               <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
               <div className="w-full text-xs text-center mb-2">
                 <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
@@ -462,13 +462,16 @@ export default function CyberLuck() {
               </div>
 
               {isDrawing ? (
-                // Drawing状态下的占位内容，保持布局一致
-                <div className="flex flex-col items-center w-full mb-4">
-                  <div className="w-full h-16 bg-[#23243a] border-2 border-[#333] rounded-none mb-4 flex items-center justify-center">
+                // Drawing状态下的占位内容，填满剩余空间
+                <div className="flex flex-col items-center w-full flex-1 justify-center">
+                  <div className="w-full h-20 bg-[#23243a] border-2 border-[#333] rounded-none mb-6 flex items-center justify-center">
                     <div className="text-gray-500 text-sm animate-pulse">Preparing your fortune...</div>
                   </div>
-                  <div className="w-full h-20 bg-[#23243a] border-2 border-[#333] rounded-none mb-4 flex items-center justify-center">
+                  <div className="w-full h-24 bg-[#23243a] border-2 border-[#333] rounded-none mb-6 flex items-center justify-center">
                     <div className="text-gray-500 text-sm animate-pulse">Analyzing market conditions...</div>
+                  </div>
+                  <div className="w-full h-16 bg-[#23243a] border-2 border-[#333] rounded-none mb-4 flex items-center justify-center">
+                    <div className="text-gray-500 text-xs animate-pulse">Generating crypto wisdom...</div>
                   </div>
                 </div>
               ) : (
