@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { useMiniAppContext } from "@/hooks/use-miniapp-context";
-import { useAccount, useSwitchChain, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useSwitchChain, useSendTransaction } from "wagmi";
 import { parseEther, encodeFunctionData } from "viem";
 import { monadTestnet } from "viem/chains";
-import { generateFortuneContent, getCachedFortuneContent, type FortuneItem, type GeneratedContent } from "@/lib/fortune-generator";
+import { generateFortuneContent, getCachedFortuneContent, type GeneratedContent } from "@/lib/fortune-generator";
 
 const MAX_DRAW_COUNT = 3;
 
@@ -63,20 +62,14 @@ export default function CyberLuck() {
 
   const [isWarpcast, setIsWarpcast] = useState(true);
 
-  // Initialize AI-generated content
+  // Initialize with cached content, generate fresh content on draw
   useEffect(() => {
     const initializeContent = async () => {
       setIsLoadingContent(true);
       try {
-        // Try to get cached content first, then generate if needed
-        let content = getCachedFortuneContent();
-
-        // If no cached content or cache is expired, generate new content
-        if (!content || content === getCachedFortuneContent()) {
-          content = await generateFortuneContent(true);
-        }
-
-        setFortuneContent(content);
+        // Start with cached content for immediate display
+        const cachedContent = getCachedFortuneContent();
+        setFortuneContent(cachedContent);
       } catch (error) {
         console.error('Failed to initialize fortune content:', error);
         // Use fallback content
@@ -136,11 +129,11 @@ export default function CyberLuck() {
     if (!isDrawing || !txSent) return;
     if (animationDone) {
       if (stickTimer.current) clearInterval(stickTimer.current);
-      const lidx = finalIdx.current;
 
-      // Use AI-generated content or fallback
-      const currentContent = fortuneContent || getCachedFortuneContent();
-      const pidx = Math.floor(Math.random() * currentContent.proverbs.length);
+      // Since we now generate single fortune and proverb per API call,
+      // we always use index 0 for both
+      const lidx = 0;
+      const pidx = 0;
 
       setLuckIdx(lidx);
       setProverbIdx(pidx);
@@ -187,24 +180,23 @@ export default function CyberLuck() {
     setAnimationDone(false);
 
     try {
-      // Step 1: Generate fresh AI content for this draw
+      // Step 1: Generate fresh fortune content for this draw
       setMintTip("Generating fortune...");
-      let currentContent: GeneratedContent;
 
       try {
-        // Try to generate fresh content with market context
-        currentContent = await generateFortuneContent(true);
-        setFortuneContent(currentContent);
+        // Generate fresh content with market context for each draw
+        const freshContent = await generateFortuneContent(true);
+        setFortuneContent(freshContent);
         setMintTip("Fortune generated, preparing draw...");
       } catch (aiError) {
         console.warn("AI generation failed, using cached content:", aiError);
         // Fallback to cached content if AI generation fails
-        currentContent = fortuneContent || getCachedFortuneContent();
         setMintTip("Using cached fortune, preparing draw...");
       }
 
       // Step 2: Start the drawing animation
-      finalIdx.current = Math.floor(Math.random() * currentContent.fortunes.length);
+      // Since we now generate single fortune per API call, always use index 0
+      finalIdx.current = 0;
       let duration = 0;
       const minDuration = 3000;
       const interval = 300;

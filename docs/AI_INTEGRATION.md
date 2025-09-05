@@ -9,6 +9,8 @@ The application now dynamically generates crypto fortune content using AI instea
 - Crypto wisdom proverbs
 - Market context-aware content generation
 
+**Compatibility Note**: This implementation uses `generateText()` with JSON parsing instead of structured output mode, making it compatible with any OpenAI-compatible model regardless of whether it supports native JSON mode.
+
 ## Setup Instructions
 
 ### 1. Environment Variables
@@ -74,9 +76,14 @@ Generates fortune content with market context.
 
 ### `/api/market-context`
 
-Provides market context for fortune generation (currently simulated).
+Provides real-time market context using CoinGecko Global API data.
 
 **Method:** `GET`
+
+**Data Sources:**
+- CoinGecko Global API (`https://api.coingecko.com/api/v3/global`)
+- 1-hour caching to minimize API calls
+- Automatic fallback to simulated data if API unavailable
 
 **Response:**
 ```json
@@ -84,7 +91,38 @@ Provides market context for fortune generation (currently simulated).
   "sentiment": "bullish",
   "volatility": "high",
   "trend": "up",
-  "description": "Positive momentum building with steady upward movement. Volatility is high with up trend."
+  "description": "Crypto markets are surging with 3.45% growth in 24h. BTC dominance at 42.1%, ETH at 18.3%. Total market cap: $2.85T. Volatility is high with up trend.",
+  "marketData": {
+    "btcDominance": 42.1,
+    "ethDominance": 18.3,
+    "marketCapChange24h": 3.45,
+    "totalMarketCap": 2850000000000
+  }
+}
+```
+
+### `/api/test-market`
+
+Test endpoint to verify CoinGecko API integration and market data processing.
+
+**Method:** `GET`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "CoinGecko API integration working",
+  "rawData": {
+    "btcDominance": 42.1,
+    "ethDominance": 18.3,
+    "marketCapChange24h": 3.45,
+    "totalMarketCap": "$2.85T"
+  },
+  "analysis": {
+    "sentiment": "bullish",
+    "volatility": "medium",
+    "btcDominanceLevel": "medium"
+  }
 }
 ```
 
@@ -199,9 +237,19 @@ curl http://localhost:3000/api/market-context
 The system includes comprehensive error handling:
 
 1. **API Failures**: Falls back to cached or static content
-2. **Invalid Responses**: Validates AI responses with Zod schemas
-3. **Network Issues**: Graceful degradation to fallback content
-4. **Rate Limits**: Caching reduces API calls
+2. **Invalid JSON Responses**: Automatic retry with simpler prompts, then fallback to static content
+3. **Malformed JSON**: Cleans markdown formatting and extracts JSON from mixed content
+4. **Network Issues**: Graceful degradation to fallback content
+5. **Rate Limits**: Caching reduces API calls
+
+### JSON Parsing Strategy
+
+The system uses a multi-step approach to handle AI responses:
+1. **Clean Response**: Remove markdown formatting (```json, ```, etc.)
+2. **Extract JSON**: Find JSON objects within mixed text responses
+3. **Parse & Validate**: Parse JSON and validate required fields
+4. **Retry Logic**: If parsing fails, retry with a simpler, more explicit prompt
+5. **Fallback**: If all else fails, use static content
 
 ## Performance Considerations
 

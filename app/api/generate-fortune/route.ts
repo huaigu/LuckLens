@@ -1,29 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { generateObject } from 'ai';
-import { z } from 'zod';
-import { AI_CONFIG, getFortunePrompt, getFallbackPrompt, isAIConfigured } from '@/lib/ai-config';
+import { generateText } from 'ai';
+import { AI_CONFIG, getFortunePrompt, getFallbackPrompt, isAIConfigured, parseAIResponse, cleanAIResponse } from '@/lib/ai-config';
 
-// Define the schema for fortune generation
-const FortuneSchema = z.object({
-  fortunes: z.array(z.object({
-    text: z.string().describe("Fortune category name with emoji (e.g., 'Moonshot 🚀')"),
-    color: z.enum([
-      "text-green-400", 
-      "text-yellow-300", 
-      "text-blue-300", 
-      "text-orange-400", 
-      "text-red-400", 
-      "text-cyan-300",
-      "text-purple-400",
-      "text-pink-400"
-    ]).describe("Tailwind CSS text color class"),
-    yi: z.array(z.string()).min(2).max(4).describe("2-4 short actions to DO (each 2-4 words)"),
-    ji: z.array(z.string()).min(2).max(4).describe("2-4 short actions to AVOID (each 2-4 words)"),
-    score: z.number().min(1).max(100).describe("Luck score from 1-100")
-  })).length(6).describe("Exactly 6 different fortune categories"),
-  proverbs: z.array(z.string()).length(10).describe("10 crypto wisdom proverbs (each 8-15 words)")
-});
+// Type definitions for response validation
+interface FortuneItem {
+  text: string;
+  color: string;
+  yi: string[];
+  ji: string[];
+  score: number;
+}
+
+interface SingleFortuneResponse {
+  fortune: FortuneItem;
+  proverb: string;
+}
 
 // Configure OpenAI Compatible client for OpenRouter
 const client = createOpenAICompatible({
@@ -43,19 +35,75 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { marketContext } = body;
+    let { marketContext } = body;
+
+    // If no market context provided, fetch real-time market data
+    if (!marketContext) {
+      try {
+        const marketResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/market-context`);
+        if (marketResponse.ok) {
+          const marketData = await marketResponse.json();
+          marketContext = marketData.description;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch market context:', error);
+        marketContext = 'General market conditions (market data unavailable)';
+      }
+    }
 
     // Create dynamic prompt based on market context
     const prompt = getFortunePrompt(marketContext);
 
-    const result = await generateObject({
+    const result = await generateText({
       model: client(AI_CONFIG.OPENROUTER.MODEL),
-      schema: FortuneSchema,
       prompt,
       temperature: AI_CONFIG.GENERATION.TEMPERATURE,
     });
 
-    return NextResponse.json(result.object);
+    // Clean and parse the AI response
+    const cleanedResponse = cleanAIResponse(result.text);
+    let parsedResponse: SingleFortuneResponse;
+
+    try {
+      parsedResponse = parseAIResponse(cleanedResponse) as SingleFortuneResponse;
+
+      // Basic validation
+      if (!parsedResponse.fortune || !parsedResponse.proverb) {
+        throw new Error('Missing required fields in AI response');
+      }
+
+      if (typeof parsedResponse.proverb !== 'string' || !parsedResponse.fortune.text) {
+        throw new Error('Invalid data structure in AI response');
+      }
+
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      console.error('Raw AI response:', result.text);
+
+      // Retry with a simpler prompt
+      const retryPrompt = `Generate crypto fortune data as valid JSON only. No extra text. Format:
+{"fortune":{"text":"Moonshot 🚀","color":"text-green-400","yi":["Buy dip","Hold strong"],"ji":["Panic sell","FOMO buy"],"score":85},"proverb":"HODL till dawn, survive the night."}`;
+
+      try {
+        const retryResult = await generateText({
+          model: client(AI_CONFIG.OPENROUTER.MODEL),
+          prompt: retryPrompt,
+          temperature: 0.3, // Lower temperature for more consistent output
+        });
+
+        const retryCleanedResponse = cleanAIResponse(retryResult.text);
+        parsedResponse = parseAIResponse(retryCleanedResponse) as SingleFortuneResponse;
+
+      } catch (retryError) {
+        console.error('Retry also failed:', retryError);
+        return NextResponse.json(
+          { error: 'Failed to generate valid fortune content' },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json(parsedResponse);
   } catch (error) {
     console.error('Fortune generation error:', error);
     return NextResponse.json(
@@ -66,7 +114,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  // Fallback endpoint for testing without market context
+  // Fallback endpoint for testing, but still try to get market context
   try {
     // Check if AI is properly configured
     if (!isAIConfigured()) {
@@ -76,16 +124,48 @@ export async function GET() {
       );
     }
 
-    const prompt = getFallbackPrompt();
+    // Try to fetch real-time market data for GET requests too
+    let marketContext = '';
+    try {
+      const marketResponse = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/market-context`);
+      if (marketResponse.ok) {
+        const marketData = await marketResponse.json();
+        marketContext = marketData.description;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch market context for GET request:', error);
+    }
 
-    const result = await generateObject({
+    // Use market-aware prompt if we have market data, otherwise use fallback
+    const prompt = marketContext ? getFortunePrompt(marketContext) : getFallbackPrompt();
+
+    const result = await generateText({
       model: client(AI_CONFIG.OPENROUTER.MODEL),
-      schema: FortuneSchema,
       prompt,
       temperature: AI_CONFIG.GENERATION.TEMPERATURE,
     });
 
-    return NextResponse.json(result.object);
+    // Clean and parse the AI response
+    const cleanedResponse = cleanAIResponse(result.text);
+    let parsedResponse: SingleFortuneResponse;
+
+    try {
+      parsedResponse = parseAIResponse(cleanedResponse) as SingleFortuneResponse;
+
+      // Basic validation
+      if (!parsedResponse.fortune || !parsedResponse.proverb) {
+        throw new Error('Missing required fields in AI response');
+      }
+
+    } catch (parseError) {
+      console.error('Failed to parse fallback AI response:', parseError);
+      return NextResponse.json(
+        { error: 'Failed to generate valid fortune content' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(parsedResponse);
   } catch (error) {
     console.error('Fortune generation error:', error);
     return NextResponse.json(

@@ -12,6 +12,12 @@ export interface GeneratedContent {
   proverbs: string[];
 }
 
+// New single-item response structure from API
+export interface SingleFortuneResponse {
+  fortune: FortuneItem;
+  proverb: string;
+}
+
 import { AI_CONFIG } from './ai-config';
 
 // Cache for generated content to avoid excessive API calls
@@ -103,6 +109,7 @@ export async function generateFortuneContent(useMarketContext: boolean = true): 
         if (marketResponse.ok) {
           const market = await marketResponse.json();
           marketContext = market.description;
+          console.log('Market context fetched:', marketContext);
         }
       } catch (error) {
         console.warn('Failed to fetch market context:', error);
@@ -122,12 +129,18 @@ export async function generateFortuneContent(useMarketContext: boolean = true): 
       throw new Error(`API response not ok: ${response.status}`);
     }
 
-    const generatedContent = await response.json();
-    
+    const singleResponse: SingleFortuneResponse = await response.json();
+
     // Validate the generated content structure
-    if (!generatedContent.fortunes || !generatedContent.proverbs) {
+    if (!singleResponse.fortune || !singleResponse.proverb) {
       throw new Error('Invalid generated content structure');
     }
+
+    // Convert single response to array format for compatibility
+    const generatedContent: GeneratedContent = {
+      fortunes: [singleResponse.fortune],
+      proverbs: [singleResponse.proverb]
+    };
 
     // Update cache
     contentCache = {
