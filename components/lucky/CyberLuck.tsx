@@ -365,7 +365,7 @@ export default function CyberLuck() {
   // Render terminal fortune output
   function renderTerminalFortune() {
     return (
-      <div className="w-full p-2 border-2 border-green-800 bg-[#0d1a0d] shadow-[2px_2px_0_#333] rounded-none font-mono absolute bottom-0 left-0">
+      <div className="w-full p-2 border-2 border-green-800 bg-[#0d1a0d] shadow-[2px_2px_0_#333] rounded-none font-mono mt-4">
         <div className="text-[10px] text-green-500 font-bold">
           root@LuckLens:~# fortune
         </div>
@@ -385,7 +385,7 @@ export default function CyberLuck() {
   const proverb = typeof proverbIdx === 'number' ? currentContent.proverbs[proverbIdx] : null;
 
   return (
-    <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center justify-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
+    <div className="w-full min-h-screen mx-0 p-0 relative flex flex-col items-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none" style={{ minHeight: 480 }}>
       {/* warpcast 跳转提示 */}
       {!isWarpcast ? (
         <div className="flex flex-col items-center justify-center w-full h-full">
@@ -446,7 +446,7 @@ export default function CyberLuck() {
             sizes="100vw"
           /> */}
           {/* 内容层 */}
-          <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-4 pb-16">
+          <div className="relative z-10 flex flex-col items-center w-full min-h-full p-4 pb-16 overflow-y-auto">
             <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
             <div className="w-full text-xs text-center mb-2">
               <span className="inline-block bg-[#ffe066] text-black font-bold px-2 py-1 rounded shadow-[2px_2px_0_#333] border-2 border-[#333]">
@@ -512,7 +512,7 @@ export default function CyberLuck() {
               </div>
             )}
             <button
-              className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal ${isDrawing
+              className={`w-full rounded-none p-2 text-xs font-bold border-2 border-[#333] shadow-[2px_2px_0_#333] uppercase break-words whitespace-normal mb-4 ${isDrawing
                   ? "bg-gray-500 text-gray-300 cursor-not-allowed"
                   : "bg-purple-500 text-white hover:bg-purple-400 transition"
                 }`}
