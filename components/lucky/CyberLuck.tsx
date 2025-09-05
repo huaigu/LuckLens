@@ -385,7 +385,7 @@ export default function CyberLuck() {
   const proverb = typeof proverbIdx === 'number' ? currentContent.proverbs[proverbIdx] : null;
 
   return (
-    <div className="w-full min-h-screen mx-0 p-0 relative flex flex-col items-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none" style={{ minHeight: 480 }}>
+    <div className="w-full h-screen mx-0 p-0 relative flex flex-col items-center border-4 border-[#ffe066] bg-[#181c24] shadow-[4px_4px_0_0_#333] rounded-none overflow-hidden" style={{ minHeight: 480 }}>
       {/* warpcast 跳转提示 */}
       {!isWarpcast ? (
         <div className="flex flex-col items-center justify-center w-full h-full">
@@ -445,8 +445,9 @@ export default function CyberLuck() {
             className="pointer-events-none select-none"
             sizes="100vw"
           /> */}
-          {/* 内容层 */}
-          <div className="relative z-10 flex flex-col items-center justify-between w-full h-full p-4 pb-16 overflow-y-auto">
+          {/* 内容层 - 固定高度容器内的可滚动内容 */}
+          <div className="relative z-10 flex flex-col w-full h-full overflow-hidden">
+            <div className="flex flex-col items-center justify-between w-full h-full p-4 pb-16 overflow-y-auto cyber-scrollbar">
             {/* 上部分内容 */}
             <div className="flex flex-col items-center w-full flex-1">
               <div className="w-full text-xs text-[#ffe066] text-center mb-2 tracking-widest drop-shadow-[2px_2px_0_#333]">{getTodayStr()}</div>
@@ -544,6 +545,7 @@ export default function CyberLuck() {
 
               {!isDrawing && renderTerminalFortune()}
             </div>
+          </div>
           </div>
 
           {/* 添加动画关键帧 */}

@@ -29,6 +29,32 @@ body {
   letter-spacing: 1px;
 }
 
+/* Custom scrollbar styles for cyber theme */
+.cyber-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-track {
+  background: #23243a;
+  border-radius: 0;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-thumb {
+  background: #ffe066;
+  border-radius: 0;
+  border: 1px solid #333;
+}
+
+.cyber-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ffed99;
+}
+
+/* Firefox scrollbar */
+.cyber-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #ffe066 #23243a;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
